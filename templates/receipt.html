@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Чек</title>
+    <style>
+        @media print {
+            body { font-family: monospace; font-size: 12pt; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Чек назначения места</h1>
+    <p>Рынок: Главный рынок</p>
+    <p>Категория: {{ assignment.category_name }}</p>
+    <p>Стенд: {{ assignment.stall_number }}</p>
+    <p>Арендатор: {{ assignment.assignee_name }} {{ assignment.assignee_surname }}</p>
+    <p>Сумма: {{ assignment.amount }} сум</p>
+    <p>Дата: {{ assignment.assigned_at }}</p>
+    <p>Оператор: {{ assignment.operator_name }}</p>
+    <button onclick="window.print()" class="no-print">Печатать чек</button>
+</body>
+</html>

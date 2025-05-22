@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Панель оператора</h2>
+<p><a href="{{ url_for('assign_place') }}">Назначить новое место</a></p>
+<h3>Назначения за сегодня</h3>
+<table>
+    <tr>
+        <th>Дата</th>
+        <th>Категория</th>
+        <th>Стенд</th>
+        <th>Арендатор</th>
+        <th>Сумма</th>
+    </tr>
+    {% for assignment in assignments %}
+    <tr>
+        <td>{{ assignment.assigned_at }}</td>
+        <td>{{ assignment.category_name }}</td>
+        <td>{{ assignment.stall_number }}</td>
+        <td>{{ assignment.assignee_name }} {{ assignment.assignee_surname }}</td>
+        <td>{{ assignment.amount }}</td>
+    </tr>
+    {% endfor %}
+</table>
+<p><a href="{{ url_for('operator_daily_report') }}">Скачать сегодняшний отчет в Excel</a></p>
+{% endblock %}

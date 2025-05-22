@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Отчеты администратора</h2>
+<form method="POST" action="{{ url_for('admin_reports') }}">
+    <label for="start_date">Дата начала:</label>
+    <input type="date" id="start_date" name="start_date" required>
+    <br>
+    <label for="end_date">Дата окончания:</label>
+    <input type="date" id="end_date" name="end_date" required>
+    <br>
+    <button type="submit">Сформировать отчет</button>
+</form>
+{% if assignments %}
+<h3>Назначения с {{ start_date }} по {{ end_date }}</h3>
+<table>
+    <tr>
+        <th>Дата</th>
+        <th>Категория</th>
+        <th>Стенд</th>
+        <th>Арендатор</th>
+        <th>Сумма</th>
+        <th>Оператор</th>
+    </tr>
+    {% for assignment in assignments %}
+    <tr>
+        <td>{{ assignment.assigned_at }}</td>
+        <td>{{ assignment.category_name }}</td>
+        <td>{{ assignment.stall_number }}</td>
+        <td>{{ assignment.assignee_name }} {{ assignment.assignee_surname }}</td>
+        <td>{{ assignment.amount }}</td>
+        <td>{{ assignment.operator_name }}</td>
+    </tr>
+    {% endfor %}
+</table>
+<p>Общее количество назначений: {{ total_assignments }}</p>
+<p>Общая сумма: {{ total_amount }} сум</p>
+<p><a href="{{ url_for('admin_reports_excel', start_date=start_date, end_date=end_date) }}">Скачать отчет в Excel</a></p>
+{% endif %}
+{% endblock %}
