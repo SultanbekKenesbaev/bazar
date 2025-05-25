@@ -3,12 +3,21 @@
 {% block content %}
 <h2>Панель оператора</h2>
 <p><a href="{{ url_for('assign_place') }}">Назначить новое место</a></p>
-<h3>Назначения за сегодня</h3>
+<h3>Назначения за {{ selected_date }}</h3>
+<form method="POST" action="{{ url_for('operator_dashboard') }}">
+    <label for="selected_date">Выберите дату:</label>
+    <input type="date" id="selected_date" name="selected_date" value="{{ selected_date }}" required>
+    <button type="submit">Показать отчет</button>
+</form>
+{% if assignments %}
+<form method="POST" action="{{ url_for('export_operator_excel') }}">
+    <input type="hidden" name="selected_date" value="{{ selected_date }}">
+    <button type="submit">Экспорт в Excel</button>
+</form>
 <table>
     <tr>
         <th>Дата</th>
         <th>Категория</th>
-        <th>Стенд</th>
         <th>Арендатор</th>
         <th>Сумма</th>
     </tr>
@@ -16,11 +25,14 @@
     <tr>
         <td>{{ assignment.assigned_at }}</td>
         <td>{{ assignment.category_name }}</td>
-        <td>{{ assignment.stall_number }}</td>
         <td>{{ assignment.assignee_name }} {{ assignment.assignee_surname }}</td>
         <td>{{ assignment.amount }}</td>
     </tr>
     {% endfor %}
 </table>
-<p><a href="{{ url_for('operator_daily_report') }}">Скачать сегодняшний отчет в Excel</a></p>
-{% endblock %}
+{% else %}
+<p>Нет назначений за {{ selected_date }}.</p>
+{% endif %}
+<p>Общее количество назначений: {{ total_assignments }}</p>
+<p>Общая сумма: {{ total_amount }} сум</p>
+{% endblock %}  

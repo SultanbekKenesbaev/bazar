@@ -1,20 +1,33 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, send_file
 import sqlite3
 from datetime import datetime
-from io import BytesIO
-import openpyxl
+import pandas as pd
+import io
+import pytz
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Для управления сессиями
+app.secret_key = 'your_secret_key'
 DATABASE = 'database.db'
+LOCAL_TZ = pytz.timezone('Asia/Tashkent') 
 
-# Подключение к базе данных
+
 def get_db():
     db = sqlite3.connect(DATABASE)
     db.row_factory = sqlite3.Row
     return db
 
-# Создание таблиц и начальных данных
+
+def convert_to_local_time(utc_time_str):
+    try:
+        utc_time = datetime.strptime(utc_time_str, '%Y-%m-%d %H:%M:%S')
+        utc_time = pytz.utc.localize(utc_time)
+        local_time = utc_time.astimezone(LOCAL_TZ)
+        return local_time.strftime('%Y-%m-%d %H:%M:%S')
+    except (ValueError, TypeError) as e:
+        print(f"Ошибка преобразования времени: {utc_time_str}, ошибка: {e}")
+        return utc_time_str
+
+
 def create_tables():
     db = get_db()
     db.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -27,40 +40,35 @@ def create_tables():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL
                   )''')
-    db.execute('''CREATE TABLE IF NOT EXISTS stalls (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    category_id INTEGER NOT NULL,
-                    stall_number TEXT NOT NULL,
-                    FOREIGN KEY (category_id) REFERENCES categories (id)
-                  )''')
     db.execute('''CREATE TABLE IF NOT EXISTS assignments (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    stall_id INTEGER NOT NULL,
+                    category_id INTEGER NOT NULL,
                     operator_id INTEGER NOT NULL,
                     assignee_name TEXT NOT NULL,
                     assignee_surname TEXT NOT NULL,
                     amount REAL NOT NULL,
+                    stall_number TEXT NOT NULL,
                     assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (stall_id) REFERENCES stalls (id),
+                    FOREIGN KEY (category_id) REFERENCES categories (id),
                     FOREIGN KEY (operator_id) REFERENCES users (id)
                   )''')
     db.commit()
 
-    # Инициализация начальных данных
+
     if db.execute('SELECT COUNT(*) FROM categories').fetchone()[0] == 0:
         db.execute('INSERT INTO categories (name) VALUES (?)', ('Продукты',))
         db.execute('INSERT INTO categories (name) VALUES (?)', ('Скот',))
         db.execute('INSERT INTO categories (name) VALUES (?)', ('Одежда',))
-    if db.execute('SELECT COUNT(*) FROM stalls').fetchone()[0] == 0:
-        categories = db.execute('SELECT id FROM categories').fetchall()
-        for cat in categories:
-            for i in range(1, 4):
-                db.execute('INSERT INTO stalls (category_id, stall_number) VALUES (?, ?)', (cat['id'], f'A{i}'))
     if db.execute('SELECT COUNT(*) FROM users').fetchone()[0] == 0:
-        for i in range(1, 6):
-            db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', (f'admin{i}', 'adminpass', 'admin'))
+        db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('admin1', 'adminpass', 'admin'))
         db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('operator1', 'oppass1', 'operator'))
         db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('operator2', 'oppass2', 'operator'))
+    if db.execute('SELECT COUNT(*) FROM assignments').fetchone()[0] == 0:
+        current_time = datetime.now(pytz.utc).strftime('%Y-%m-%d %H:%M:%S')
+        db.execute('INSERT INTO assignments (category_id, operator_id, assignee_name, assignee_surname, amount, stall_number, assigned_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                  (1, 2, 'Иван', 'Иванов', 10000, 'STALL-1', current_time))
+        db.execute('INSERT INTO assignments (category_id, operator_id, assignee_name, assignee_surname, amount, stall_number, assigned_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                  (2, 3, 'Петр', 'Петров', 20000, 'STALL-2', current_time))
     db.commit()
 
 # Маршрут для входа
@@ -80,7 +88,7 @@ def login():
             else:
                 return redirect(url_for('admin_reports'))
         else:
-            return 'Неверные учетные данные'
+            return render_template('login.html', error='Неверные учетные данные')
     return render_template('login.html')
 
 # Маршрут для выхода
@@ -92,20 +100,28 @@ def logout():
     return redirect(url_for('login'))
 
 # Панель оператора
-@app.route('/operator_dashboard')
+@app.route('/operator_dashboard', methods=['GET', 'POST'])
 def operator_dashboard():
     if 'user_id' not in session or session['role'] != 'operator':
         return redirect(url_for('login'))
     db = get_db()
-    today = datetime.now().date().isoformat()
+    operator_id = session['user_id']
+    selected_date = request.form.get('selected_date', datetime.now(LOCAL_TZ).date().strftime('%Y-%m-%d'))
+    
+    if request.method == 'POST' and 'selected_date' in request.form:
+        selected_date = request.form['selected_date']
+    
     assignments = db.execute('''
-        SELECT a.*, c.name as category_name, s.stall_number
+        SELECT a.*, c.name as category_name
         FROM assignments a
-        JOIN stalls s ON a.stall_id = s.id
-        JOIN categories c ON s.category_id = c.id
-        WHERE DATE(a.assigned_at) = ?
-    ''', (today,)).fetchall()
-    return render_template('operator_dashboard.html', assignments=assignments)
+        JOIN categories c ON a.category_id = c.id
+        WHERE DATE(a.assigned_at) = ? AND a.operator_id = ?
+    ''', (selected_date, operator_id)).fetchall()
+    print("Assignments for operator", operator_id, "on", selected_date, ":", [(a['id'], a['assigned_at']) for a in assignments])
+    assignments = [dict(assignment, assigned_at=convert_to_local_time(assignment['assigned_at'])) for assignment in assignments]
+    total_assignments = len(assignments)
+    total_amount = sum(assignment['amount'] for assignment in assignments)
+    return render_template('operator_dashboard.html', assignments=assignments, total_assignments=total_assignments, total_amount=total_amount, selected_date=selected_date)
 
 # Форма для назначения места
 @app.route('/assign_place', methods=['GET'])
@@ -115,22 +131,6 @@ def assign_place():
     db = get_db()
     categories = db.execute('SELECT * FROM categories').fetchall()
     return render_template('assign_place.html', categories=categories)
-
-# API для получения доступных стендов
-@app.route('/get_available_stalls/<int:category_id>')
-def get_available_stalls(category_id):
-    db = get_db()
-    today = datetime.now().date().isoformat()
-    all_stalls = db.execute('SELECT id, stall_number FROM stalls WHERE category_id = ?', (category_id,)).fetchall()
-    assigned_stalls = db.execute('''
-        SELECT s.id
-        FROM stalls s
-        JOIN assignments a ON s.id = a.stall_id
-        WHERE s.category_id = ? AND DATE(a.assigned_at) = ?
-    ''', (category_id, today)).fetchall()
-    assigned_ids = [stall['id'] for stall in assigned_stalls]
-    available_stalls = [stall for stall in all_stalls if stall['id'] not in assigned_ids]
-    return jsonify([{'id': stall['id'], 'number': stall['stall_number']} for stall in available_stalls])
 
 # Обработка назначения места
 @app.route('/assign', methods=['POST'])
@@ -142,9 +142,14 @@ def assign():
     assignee_surname = request.form['assignee_surname']
     amount = request.form['amount']
     operator_id = session['user_id']
+    
+    # Генерация уникального номера стенда
     db = get_db()
-    db.execute('INSERT INTO assignments (category_id, operator_id, assignee_name, assignee_surname, amount) VALUES (?, ?, ?, ?, ?)',
-               (category_id, operator_id, assignee_name, assignee_surname, amount))
+    last_assignment = db.execute('SELECT MAX(id) FROM assignments').fetchone()[0]
+    stall_number = f'STALL-{last_assignment + 1 if last_assignment else 1}'
+    
+    db.execute('INSERT INTO assignments (category_id, operator_id, assignee_name, assignee_surname, amount, stall_number) VALUES (?, ?, ?, ?, ?, ?)',
+               (category_id, operator_id, assignee_name, assignee_surname, amount, stall_number))
     db.commit()
     assignment_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
     return redirect(url_for('receipt', assignment_id=assignment_id))
@@ -154,15 +159,16 @@ def assign():
 def receipt(assignment_id):
     db = get_db()
     assignment = db.execute('''
-        SELECT a.*, c.name as category_name, s.stall_number, u.username as operator_name
+        SELECT a.*, c.name as category_name, u.username as operator_name
         FROM assignments a
-        JOIN stalls s ON a.stall_id = s.id
-        JOIN categories c ON s.category_id = c.id
+        JOIN categories c ON a.category_id = c.id
         JOIN users u ON a.operator_id = u.id
         WHERE a.id = ?
     ''', (assignment_id,)).fetchone()
     if not assignment:
-        return 'Назначение не найдено', 404
+        return render_template('error.html', message='Назначение не найдено'), 404
+    assignment = dict(assignment)
+    assignment['assigned_at'] = convert_to_local_time(assignment['assigned_at'])
     return render_template('receipt.html', assignment=assignment)
 
 # Отчеты администратора
@@ -170,114 +176,143 @@ def receipt(assignment_id):
 def admin_reports():
     if 'user_id' not in session or session['role'] != 'admin':
         return redirect(url_for('login'))
+    db = get_db()
+    operators = db.execute('SELECT id, username FROM users WHERE role = ?', ('operator',)).fetchall()
+    categories = db.execute('SELECT * FROM categories').fetchall()
     if request.method == 'POST':
         start_date = request.form['start_date']
         end_date = request.form['end_date']
-        db = get_db()
-        assignments = db.execute('''
-            SELECT a.*, c.name as category_name, s.stall_number, u.username as operator_name
+        selected_category = request.form.get('category_id', '')
+        selected_operator = request.form.get('operator_id', '')
+        
+        query = '''
+            SELECT a.*, c.name as category_name, u.username as operator_name
             FROM assignments a
-            JOIN stalls s ON a.stall_id = s.id
-            JOIN categories c ON s.category_id = c.id
+            JOIN categories c ON a.category_id = c.id
             JOIN users u ON a.operator_id = u.id
             WHERE a.assigned_at BETWEEN ? AND ?
-        ''', (start_date, end_date)).fetchall()
+        '''
+        params = [start_date, end_date]
+        
+        if selected_category:
+            query += ' AND a.category_id = ?'
+            params.append(selected_category)
+        if selected_operator:
+            query += ' AND a.operator_id = ?'
+            params.append(selected_operator)
+        
+        assignments = db.execute(query, params).fetchall()
+        assignments = [dict(assignment, assigned_at=convert_to_local_time(assignment['assigned_at'])) for assignment in assignments]
         total_assignments = len(assignments)
         total_amount = sum(assignment['amount'] for assignment in assignments)
-        return render_template('admin_reports.html', assignments=assignments, start_date=start_date, end_date=end_date, total_assignments=total_assignments, total_amount=total_amount)
-    return render_template('admin_reports.html')
+        
+        selected_operator_name = None
+        if selected_operator:
+            for operator in operators:
+                if str(operator['id']) == selected_operator:
+                    selected_operator_name = operator['username']
+                    break
+        
+        selected_category_name = None
+        if selected_category:
+            for category in categories:
+                if str(category['id']) == selected_category:
+                    selected_category_name = category['name']
+                    break
+        
+        return render_template('admin_reports.html', assignments=assignments, start_date=start_date, end_date=end_date, 
+                              total_assignments=total_assignments, total_amount=total_amount, operators=operators, 
+                              categories=categories, selected_category=selected_category, selected_operator=selected_operator,
+                              selected_operator_name=selected_operator_name, selected_category_name=selected_category_name)
+    return render_template('admin_reports.html', operators=operators, categories=categories)
 
-# Excel-отчет для администраторов
-@app.route('/admin_reports_excel')
-def admin_reports_excel():
+# Экспорт отчетов администратора в Excel
+@app.route('/export_excel', methods=['POST'])
+def export_excel():
     if 'user_id' not in session or session['role'] != 'admin':
         return redirect(url_for('login'))
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
+    start_date = request.form['start_date']
+    end_date = request.form['end_date']
+    selected_category = request.form.get('category_id', '')
+    selected_operator = request.form.get('operator_id', '')
+    
     db = get_db()
-    assignments = db.execute('''
-        SELECT a.*, c.name as category_name, s.stall_number, u.username as operator_name
+    query = '''
+        SELECT a.assigned_at, c.name as category_name, 
+               a.assignee_name, a.assignee_surname, a.amount, u.username as operator_name
         FROM assignments a
-        JOIN stalls s ON a.stall_id = s.id
-        JOIN categories c ON s.category_id = c.id
+        JOIN categories c ON a.category_id = c.id
         JOIN users u ON a.operator_id = u.id
         WHERE a.assigned_at BETWEEN ? AND ?
-    ''', (start_date, end_date)).fetchall()
-
-    # Создание Excel-файла
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Отчет по назначениям"
-
-    # Добавление заголовков
-    headers = ['Дата', 'Категория', 'Стенд', 'Арендатор (имя)', 'Арендатор (фамилия)', 'Сумма', 'Оператор']
-    for col_num, header in enumerate(headers, 1):
-        ws.cell(row=1, column=col_num, value=header)
-
-    # Добавление данных
-    for row_num, assignment in enumerate(assignments, 2):
-        ws.cell(row=row_num, column=1, value=assignment['assigned_at'])
-        ws.cell(row=row_num, column=2, value=assignment['category_name'])
-        ws.cell(row=row_num, column=3, value=assignment['stall_number'])
-        ws.cell(row=row_num, column=4, value=assignment['assignee_name'])
-        ws.cell(row=row_num, column=5, value=assignment['assignee_surname'])
-        ws.cell(row=row_num, column=6, value=assignment['amount'])
-        ws.cell(row=row_num, column=7, value=assignment['operator_name'])
-
-    # Сохранение в BytesIO
-    output = BytesIO()
-    wb.save(output)
+    '''
+    params = [start_date, end_date]
+    
+    if selected_category:
+        query += ' AND a.category_id = ?'
+        params.append(selected_category)
+    if selected_operator:
+        query += ' AND a.operator_id = ?'
+        params.append(selected_operator)
+    
+    assignments = db.execute(query, params).fetchall()
+    assignments = [dict(assignment, assigned_at=convert_to_local_time(assignment['assigned_at'])) for assignment in assignments]
+    
+    data = [{
+        'Дата': assignment['assigned_at'],
+        'Категория': assignment['category_name'],
+        'Имя арендатора': assignment['assignee_name'],
+        'Фамилия арендатора': assignment['assignee_surname'],
+        'Сумма': assignment['amount'],
+        'Оператор': assignment['operator_name']
+    } for assignment in assignments]
+    df = pd.DataFrame(data)
+    
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Отчет')
     output.seek(0)
+    
+    return send_file(output, download_name=f'report_{start_date}_to_{end_date}.xlsx', as_attachment=True)
 
-    # Отправка файла
-    return send_file(output, download_name='assignments_report.xlsx', as_attachment=True)
-
-# Excel-отчет для операторов
-@app.route('/operator_daily_report')
-def operator_daily_report():
+# Экспорт отчетов оператора в Excel
+@app.route('/export_operator_excel', methods=['POST'])
+def export_operator_excel():
     if 'user_id' not in session or session['role'] != 'operator':
         return redirect(url_for('login'))
-    today = datetime.now().date().isoformat()
+    selected_date = request.form['selected_date']
+    operator_id = session['user_id']
+    
     db = get_db()
     assignments = db.execute('''
-        SELECT a.*, c.name as category_name, s.stall_number
+        SELECT a.assigned_at, c.name as category_name, 
+               a.assignee_name, a.assignee_surname, a.amount, u.username as operator_name
         FROM assignments a
-        JOIN stalls s ON a.stall_id = s.id
-        JOIN categories c ON s.category_id = c.id
-        WHERE a.operator_id = ? AND DATE(a.assigned_at) = ?
-    ''', (session['user_id'], today)).fetchall()
-
-    # Создание Excel-файла
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Сегодняшние назначения"
-
-    # Добавление заголовков
-    headers = ['Дата', 'Категория', 'Стенд', 'Арендатор (имя)', 'Арендатор (фамилия)', 'Сумма']
-    for col_num, header in enumerate(headers, 1):
-        ws.cell(row=1, column=col_num, value=header)
-
-    # Добавление данных
-    for row_num, assignment in enumerate(assignments, 2):
-        ws.cell(row=row_num, column=1, value=assignment['assigned_at'])
-        ws.cell(row=row_num, column=2, value=assignment['category_name'])
-        ws.cell(row=row_num, column=3, value=assignment['stall_number'])
-        ws.cell(row=row_num, column=4, value=assignment['assignee_name'])
-        ws.cell(row=row_num, column=5, value=assignment['assignee_surname'])
-        ws.cell(row=row_num, column=6, value=assignment['amount'])
-
-    # Сохранение в BytesIO
-    output = BytesIO()
-    wb.save(output)
+        JOIN categories c ON a.category_id = c.id
+        JOIN users u ON a.operator_id = u.id
+        WHERE DATE(a.assigned_at) = ? AND a.operator_id = ?
+    ''', (selected_date, operator_id)).fetchall()
+    assignments = [dict(assignment, assigned_at=convert_to_local_time(assignment['assigned_at'])) for assignment in assignments]
+    
+    data = [{
+        'Дата': assignment['assigned_at'],
+        'Категория': assignment['category_name'],
+        'Имя арендатора': assignment['assignee_name'],
+        'Фамилия арендатора': assignment['assignee_surname'],
+        'Сумма': assignment['amount'],
+        'Оператор': assignment['operator_name']
+    } for assignment in assignments]
+    df = pd.DataFrame(data)
+    
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Отчет')
     output.seek(0)
-
-    # Отправка файла
-    return send_file(output, attachment_filename='todays_assignments.xlsx', as_attachment=True)
+    
+    return send_file(output, download_name=f'report_{selected_date}.xlsx', as_attachment=True)
 
 @app.route('/')
 def index():
-    return redirect(url_for('login'))  # Redirect to login page, for example
-
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     create_tables()

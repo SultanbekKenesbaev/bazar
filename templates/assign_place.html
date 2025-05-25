@@ -11,11 +11,6 @@
         {% endfor %}
     </select>
     <br>
-    <label for="stall">Стенд:</label>
-    <select id="stall" name="stall_id" required>
-        <option value="">Выбрать стенд</option>
-    </select>
-    <br>
     <label for="name">Имя:</label>
     <input type="text" id="name" name="assignee_name" required>
     <br>
@@ -27,26 +22,4 @@
     <br>
     <button type="submit">Назначить</button>
 </form>
-
-<script>
-document.getElementById('category').addEventListener('change', function() {
-    var categoryId = this.value;
-    if (categoryId) {
-        fetch('/get_available_stalls/' + categoryId)
-            .then(response => response.json())
-            .then(data => {
-                var stallSelect = document.getElementById('stall');
-                stallSelect.innerHTML = '<option value="">Выбрать стенд</option>';
-                data.forEach(stall => {
-                    var option = document.createElement('option');
-                    option.value = stall.id;
-                    option.text = stall.number;
-                    stallSelect.appendChild(option);
-                });
-            });
-    } else {
-        document.getElementById('stall').innerHTML = '<option value="">Выбрать стенд</option>';
-    }
-});
-</script>
 {% endblock %}
