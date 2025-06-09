@@ -1,2 +1,4 @@
-Flask
-pip install pytz pandas openpyxl
+flask
+pandas
+pytz
+openpyxl
