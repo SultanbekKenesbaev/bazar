@@ -1,0 +1,230 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: #f3f4f6;
+}
+
+.admin-layout {
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  background: #111827;
+  color: #fff;
+  padding: 20px;
+}
+
+.sidebar h2 {
+  margin-bottom: 30px;
+  font-size: 22px;
+}
+
+.sidebar nav a {
+  display: block;
+  color: #cbd5e1;
+  text-decoration: none;
+  margin: 12px 0;
+  transition: 0.3s;
+}
+
+.sidebar nav a:hover {
+  color: #22c55e;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: #fff;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+}
+.content-area {
+  padding: 0 20px;
+}
+.content-area > h1 {
+  text-align: center;
+  margin: 30px 0;
+}
+.topbar h1 {
+  margin: 0;
+  font-size: 24px;
+  text-align: center;
+}
+
+.report-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  background: #fff;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+}
+
+.form-group {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.form-group label {
+  font-weight: 600;
+}
+
+input,
+select {
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+button {
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-primary {
+  background: #22c55e;
+  color: #fff;
+  grid-column: span 2;
+}
+
+.btn-secondary {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  margin-top: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.data-table th,
+.data-table td {
+  padding: 14px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.data-table th {
+  background: #f9fafb;
+}
+
+.data-table tr:hover {
+  background: #f3f4f6;
+}
+.report-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.report-summary h2 {
+  margin-top: 0;
+}
+
+.report-totals {
+  margin-top: 20px;
+  font-size: 16px;
+}
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    padding: 15px;
+    text-align: center;
+  }
+
+  .sidebar h2 {
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+
+  .sidebar nav a {
+    display: inline-block;
+    margin: 10px 15px;
+  }
+
+  .main-content {
+    padding: 10px;
+  }
+
+  .topbar {
+    padding: 15px;
+  }
+
+  .topbar h1 {
+    font-size: 20px;
+  }
+
+  .report-form {
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .form-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .form-group label {
+    font-size: 14px;
+  }
+
+  input,
+  select {
+    width: 100%;
+  }
+
+  .report-summary {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .data-table {
+    font-size: 14px;
+    overflow-x: auto;
+    display: block;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 10px;
+  }
+
+  .report-summary h2 {
+    font-size: 18px;
+  }
+
+  .report-totals {
+    font-size: 14px;
+  }
+  .content-area{
+    padding: 0;
+  }
+}

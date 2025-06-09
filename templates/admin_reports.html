@@ -1,66 +1,89 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Отчеты администратора</h2>
-<form method="POST" action="{{ url_for('admin_reports') }}">
-    <label for="start_date">Дата начала:</label>
-    <input type="date" id="start_date" name="start_date" required>
-    <br>
-    <label for="end_date">Дата окончания:</label>
-    <input type="date" id="end_date" name="end_date" required>
-    <br>
-    <label for="category_id">Категория:</label>
-    <select id="category_id" name="category_id">
-        <option value="">Все категории</option>
-        {% for category in categories %}
-        <option value="{{ category.id }}" {% if category.id|string == selected_category %}selected{% endif %}>{{ category.name }}</option>
-        {% endfor %}
-    </select>
-    <br>
-    <label for="operator_id">Оператор:</label>
-    <select id="operator_id" name="operator_id">
-        <option value="">Все операторы</option>
-        {% for operator in operators %}
-        <option value="{{ operator.id }}" {% if operator.id|string == selected_operator %}selected{% endif %}>{{ operator.username }}</option>
-        {% endfor %}
-    </select>
-    <br>
-    <button type="submit">Сформировать отчет</button>
-</form>
-{% if assignments %}
-<h3>Назначения с {{ start_date }} по {{ end_date }}</h3>
-{% if selected_category %}
-<p>Категория: {{ selected_category_name }}</p>
-{% endif %}
-{% if selected_operator %}
-<p>Оператор: {{ selected_operator_name }}</p>
-{% endif %}
-<form method="POST" action="{{ url_for('export_excel') }}">
-    <input type="hidden" name="start_date" value="{{ start_date }}">
-    <input type="hidden" name="end_date" value="{{ end_date }}">
-    <input type="hidden" name="category_id" value="{{ selected_category }}">
-    <input type="hidden" name="operator_id" value="{{ selected_operator }}">
-    <button type="submit">Экспорт в Excel</button>
-</form>
-<table>
-    <tr>
-        <th>Дата</th>
-        <th>Категория</th>
-        <th>Арендатор</th>
-        <th>Сумма</th>
-        <th>Оператор</th>
-    </tr>
-    {% for assignment in assignments %}
-    <tr>
-        <td>{{ assignment.assigned_at }}</td>
-        <td>{{ assignment.category_name }}</td>
-        <td>{{ assignment.assignee_name }} {{ assignment.assignee_surname }}</td>
-        <td>{{ assignment.amount }}</td>
-        <td>{{ assignment.operator_name }}</td>
-    </tr>
-    {% endfor %}
-</table>
-<p>Общее количество назначений: {{ total_assignments }}</p>
-<p>Общая сумма: {{ total_amount }} сум</p>
-{% endif %}
+<div class="admin-layout">
+  
+
+  <main class="main-content">
+
+    <section class="content-area">
+        
+        <h1>Отчёты администратора</h1>
+      <form method="POST" action="{{ url_for('admin_reports') }}" class="report-form">
+        <div class="form-group">
+          <label>Дата начала</label>
+          <input type="date" name="start_date" required>
+        </div>
+        <div class="form-group">
+          <label>Дата окончания</label>
+          <input type="date" name="end_date" required>
+        </div>
+        <div class="form-group">
+          <label>Категория</label>
+          <select name="category_id">
+            <option value="">Все категории</option>
+            {% for category in categories %}
+            <option value="{{ category.id }}" {% if category.id|string == selected_category %}selected{% endif %}>
+              {{ category.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Оператор</label>
+          <select name="operator_id">
+            <option value="">Все операторы</option>
+            {% for operator in operators %}
+            <option value="{{ operator.id }}" {% if operator.id|string == selected_operator %}selected{% endif %}>
+              {{ operator.username }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="btn-s">
+        <button type="submit" class="btn-primary">Сформировать</button>
+        </div>
+      </form>
+
+      {% if assignments %}
+      <div class="report-summary">
+        <h2>Назначения с {{ start_date }} по {{ end_date }}</h2>
+        <form method="POST" action="{{ url_for('export_excel') }}">
+          <input type="hidden" name="start_date" value="{{ start_date }}">
+          <input type="hidden" name="end_date" value="{{ end_date }}">
+          <input type="hidden" name="category_id" value="{{ selected_category }}">
+          <input type="hidden" name="operator_id" value="{{ selected_operator }}">
+          <button type="submit" class="btn-secondary">Экспорт в Excel</button>
+        </form>
+      </div>
+      <div class="report-totals">
+        <p><i class="fas fa-tasks"></i> Всего назначений: <strong>{{ total_assignments }}</strong></p>
+        <p><i class="fas fa-wallet"></i> Общая сумма: <strong>{{ total_amount }}</strong> сум</p>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Дата</th>
+            <th>Категория</th>
+            <th>Арендатор</th>
+            <th>Сумма</th>
+            <th>Оператор</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for assignment in assignments %}
+          <tr>
+            <td>{{ assignment.assigned_at }}</td>
+            <td>{{ assignment.category_name }}</td>
+            <td>{{ assignment.assignee_name }} {{ assignment.assignee_surname }}</td>
+            <td>{{ assignment.amount }}</td>
+            <td>{{ assignment.operator_name }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </section>
+  </main>
+</div>
 {% endblock %}

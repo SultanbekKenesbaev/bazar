@@ -1,38 +1,80 @@
-{% extends "base.html" %}
+{% extends "base.html" %} {% block content %}
+<div class="operator-dashboard">
+  <h2>Панель оператора</h2>
+  <div class="mesto">
+    <a href="{{ url_for('assign_place') }}" class="btn-link"
+      >+ Назначить новое место</a
+    >
+  </div>
 
-{% block content %}
-<h2>Панель оператора</h2>
-<p><a href="{{ url_for('assign_place') }}">Назначить новое место</a></p>
-<h3>Назначения за {{ selected_date }}</h3>
-<form method="POST" action="{{ url_for('operator_dashboard') }}">
-    <label for="selected_date">Выберите дату:</label>
-    <input type="date" id="selected_date" name="selected_date" value="{{ selected_date }}" required>
-    <button type="submit">Показать отчет</button>
-</form>
-{% if assignments %}
-<form method="POST" action="{{ url_for('export_operator_excel') }}">
-    <input type="hidden" name="selected_date" value="{{ selected_date }}">
-    <button type="submit">Экспорт в Excel</button>
-</form>
-<table>
-    <tr>
+  <div class="card">
+    <form
+      method="POST"
+      action="{{ url_for('operator_dashboard') }}"
+      class="filter-form"
+    >
+      <h3>Назначения за {{ selected_date }}</h3>
+      <div class="data-form-div">
+        <div class="div">
+          <label for="selected_date">Выберите дату:</label>
+          <input
+            type="date"
+            id="selected_date"
+            name="selected_date"
+            value="{{ selected_date }}"
+            required
+          />
+        </div>
+        <button type="submit" class="btn-primary">Показать отчет</button>
+      </div>
+    </form>
+  </div>
+
+  {% if assignments %}
+  <form
+    method="POST"
+    action="{{ url_for('export_operator_excel') }}"
+    class="export-form"
+  >
+    <div class="report-totals">
+      <p>
+        <i class="fas fa-tasks"></i>
+        <strong>Общее количество назначений:</strong> {{ total_assignments }}
+      </p>
+      <p>
+        <i class="fas fa-wallet"></i> <strong>Общая сумма:</strong> {{
+        total_amount }} сум
+      </p>
+    </div>
+    <input type="hidden" name="selected_date" value="{{ selected_date }}" />
+    <div class="exel">
+      <button type="submit" class="btn-secondary">Экспорт в Excel</button>
+    </div>
+  </form>
+  <table class="data-table">
+    <thead>
+      <tr>
         <th>Дата</th>
         <th>Категория</th>
         <th>Арендатор</th>
         <th>Сумма</th>
-    </tr>
-    {% for assignment in assignments %}
-    <tr>
+      </tr>
+    </thead>
+    <tbody>
+      {% for assignment in assignments %}
+      <tr>
         <td>{{ assignment.assigned_at }}</td>
         <td>{{ assignment.category_name }}</td>
-        <td>{{ assignment.assignee_name }} {{ assignment.assignee_surname }}</td>
+        <td>
+          {{ assignment.assignee_name }} {{ assignment.assignee_surname }}
+        </td>
         <td>{{ assignment.amount }}</td>
-    </tr>
-    {% endfor %}
-</table>
-{% else %}
-<p>Нет назначений за {{ selected_date }}.</p>
-{% endif %}
-<p>Общее количество назначений: {{ total_assignments }}</p>
-<p>Общая сумма: {{ total_amount }} сум</p>
-{% endblock %}  
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-text">Нет назначений за {{ selected_date }}.</p>
+  {% endif %}
+</div>
+{% endblock %}

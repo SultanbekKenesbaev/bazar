@@ -1,14 +1,16 @@
-{% extends "base.html" %}
-
-{% block content %}
-<h2>Вход</h2>
-<form method="POST" action="{{ url_for('login') }}">
-    <label for="username">Имя пользователя:</label>
-    <input type="text" id="username" name="username" required>
-    <br>
-    <label for="password">Пароль:</label>
-    <input type="password" id="password" name="password" required>
-    <br>
-    <button type="submit">Войти</button>
-</form>
+{% extends "base.html" %} {% block content %}
+<div class="main">
+    <form method="POST" action="{{ url_for('login') }}" class="login-form" data-aos="fade-up">
+        <h2>Вход</h2>
+        <div class="block">
+          <label for="username">Имя пользователя:</label>
+          <input type="text" id="username" name="username" required />
+          <br />
+          <label for="password">Пароль:</label>
+          <input type="password" id="password" name="password" required />
+          <br />
+          <button type="submit">Войти</button>
+        </div>
+      </form>
+</div>
 {% endblock %}

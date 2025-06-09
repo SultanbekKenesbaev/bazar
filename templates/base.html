@@ -1,21 +1,88 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>CRM для рынка</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bazar.io</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/dashboard.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/admin.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/assign_place.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div id="loader">
+      <div class="loader-content">
+        <h1>Bazar.iO</h1>
+        <div class="loader-spinner"></div>
+      </div>
+    </div>
+
     <header>
-        <h1>CRM для рынка</h1>
-        {% if session.user_id %}
-        <p>Добро пожаловать, {{ session.username }} (<a href="{{ url_for('logout') }}">Выйти</a>)</p>
-        {% else %}
-        <p><a href="{{ url_for('login') }}">Войти</a></p>
-        {% endif %}
+      <h1>Bazar.io</h1>
+      {% if session.user_id %}
+      <div class="box-name">
+        <h3>{{ session.username }}</h3>
+        <a
+          href="{{ url_for('logout') }}"
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: #333;
+            font-size: 16px;
+          "
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="22"
+            height="22"
+            fill="#22c55e"
+            viewBox="0 0 24 24"
+          >
+            <path d="M16 13v-2H7V8l-5 4 5 4v-3h9z" />
+            <path
+              d="M20 3H10c-1.1 0-2 .9-2 2v4h2V5h10v14H10v-4H8v4c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"
+            />
+          </svg>
+          Выйти
+        </a>
+      </div>
+      {% endif %}
     </header>
-    <main>
-        {% block content %}{% endblock %}
-    </main>
-</body>
+    <main>{% block content %}{% endblock %}</main>
+    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+    <script>
+      AOS.init({
+        once: true,
+        duration: 700,
+      });
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          const loader = document.getElementById("loader");
+          loader.style.opacity = "0";
+          setTimeout(() => {
+            loader.style.display = "none";
+          }, 500);
+        }, 1000);
+      });
+    </script>
+  </body>
 </html>
